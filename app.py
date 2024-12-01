@@ -283,41 +283,43 @@ class VideoCaptionApp:
                     return img_str
 
                 def generate_stats_report():
-                    top_n = 3  # Number of top captions to display per video
-                    html_report = "<h2>Top Captions per Video</h2>\n"
+                    video_ratings = []
+                    for video_id, captions in self.captions_db.items():
+                        if captions:
+                            top_caption = max(captions, key=lambda x: x.get('elo_rating', 0))
+                            video_ratings.append((video_id, top_caption['text'], top_caption.get('elo_rating', 0)))
+
+                    # Sort videos by top caption rating in descending order
+                    video_ratings_sorted = sorted(video_ratings, key=lambda x: x[2], reverse=True)
+
+                    # Select top 3 videos
+                    top_videos = video_ratings_sorted[:3]
+
+                    # Generate HTML report
+                    html_report = "<h2>Top 3 Videos with Their Top Captions</h2>\n"
                     html_report += "<table>\n"
                     html_report += "    <thead>\n"
                     html_report += "        <tr>\n"
-                    html_report += "            <th>Video Thumbnail</th>\n"
+                    html_report += "            <th>Rank</th>\n"
                     html_report += "            <th>Video ID</th>\n"
-                    html_report += "            <th>Caption</th>\n"
+                    html_report += "            <th>Top Caption</th>\n"
                     html_report += "            <th>ELO Rating</th>\n"
                     html_report += "        </tr>\n"
                     html_report += "    </thead>\n"
                     html_report += "    <tbody>\n"
 
-                    for video_id, captions in self.captions_db.items():
-                        video_path = os.path.join(self.videos_dir, f"{video_id}.mp4")  # Adjust extension if needed
-                        if os.path.exists(video_path):
-                            img_str = generate_thumbnail(video_path)
-                            thumbnail_html = f'<img src="data:image/png;base64,{img_str}" width="100" height="75">'
-                        else:
-                            thumbnail_html = "Thumbnail Not Available"
-
-                        sorted_captions = sorted(captions, key=lambda x: x.get('elo_rating', 0), reverse=True)
-                        for caption in sorted_captions[:top_n]:
-                            html_report += f"        <tr>\n"
-                            html_report += f"            <td>{thumbnail_html}</td>\n"
-                            html_report += f"            <td>{video_id}</td>\n"
-                            html_report += f"            <td>{caption['text']}</td>\n"
-                            html_report += f"            <td>{caption.get('elo_rating', 0)}</td>\n"
-                            html_report += f"        </tr>\n"
+                    for rank, (video_id, caption, rating) in enumerate(top_videos, start=1):
+                        html_report += "        <tr>\n"
+                        html_report += f"            <td>{rank}</td>\n"
+                        html_report += f"            <td>{video_id}</td>\n"
+                        html_report += f"            <td>{caption}</td>\n"
+                        html_report += f"            <td>{rating}</td>\n"
+                        html_report += "        </tr>\n"
 
                     html_report += "    </tbody>\n"
                     html_report += "</table>\n"
 
                     return html_report
-
 
                 refresh_stats_btn.click(
                     fn=generate_stats_report,
